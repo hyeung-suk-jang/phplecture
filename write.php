@@ -1,4 +1,5 @@
 <?php
+session_start();
 
 ?>
 <!DOCTYPE>
@@ -19,7 +20,7 @@
 <table class="tbl">
 <tr>
 <td>작성자</td>
-<td><input type='text' name='username'></td>
+<td><input type='text' name='username' value="<?=$_SESSION['username']?>"></td>
 </tr>
 <tr>
 <td>글제목</td>

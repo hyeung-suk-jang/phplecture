@@ -15,5 +15,6 @@ echo $myval . "제 이름은 " . $myname .'입니다.' . $hello."<br>";
 <body>
 여기는 게시판 메인 화면입니다.
 <a href="list.php">리스트 페이지로 가기</a>
+
 </body>
 </html>
