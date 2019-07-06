@@ -18,7 +18,6 @@ include_once("dbconn.php");
 	 width:800px;
 }
 .tbl tr td{
-	width:200px;
 	border:1px solid;
 }
 .alignright{
@@ -29,6 +28,17 @@ include_once("dbconn.php");
 </style>
 </head>
 <body>
+<?
+if(isset($_SESSION['userid'])){
+?>
+<a href="#" id="logoutbtn">로그아웃</a>
+<?
+}else{
+?>
+<a href="#" id="loginbtn">로그인</a>
+<?
+}
+?>
 <a href="#layer2" class="btn-example">딤처리 팝업레이어 1</a>
 <div class="dim-layer">
     <div class="dimBg"></div>
@@ -53,6 +63,12 @@ include_once("dbconn.php");
 </div>
 
 <table class="tbl">
+<colgroup>
+<col width="100px">
+<col width="500px">
+<col width="100px">
+<col width="100px">
+</colgroup>
 <tr>
 <td>번호</td>
 <td>제목</td>
@@ -60,39 +76,58 @@ include_once("dbconn.php");
 <td>작성일</td>
 </tr>
 <?php
+
+$searchtype = @$_REQUEST['searchtype'];
+$searchtext = @$_REQUEST['searchtext'];
+
 //페이지처리.
 
 //(조건식) ? (명령문1) : (명령문2)
 $page = !empty($_REQUEST['page']) ? $_REQUEST['page']:1;//현재 페이지번호.
 
 // 페이지 설정
-$page_set = 10; // 한페이지에 보여줄 글 수
+$page_set = 10; // 한페이지에 보여줄 글 수 
 $block_set = 10; // 한화면에 보여줄 페이지 갯수 블럭수
 
 $limit_idx = ($page - 1) * $page_set; // limit시작위치
 
 $sql = "select * from boardlist";
-$sql = $sql ." LIMIT $limit_idx, $page_set";
+
+$wheresql ="";
+if(isset($searchtype) && isset($searchtext)){
+	if($searchtype == 'writer'){
+		$wheresql =  " where username like '%$searchtext%' ";
+	}else if($searchtype == 'contents'){
+		$wheresql =   " where contents like '%$searchtext%' ";
+	}else if($searchtype == 'subject'){
+		$wheresql =   " where subject like '%$searchtext%' ";
+	}
+}
+
+$sql = $sql.$wheresql ." LIMIT $limit_idx, $page_set"; //select * from boardlist limit 10, 10
+echo $sql;
 
 $result = mysqli_query($connect_db, $sql);
 
 $sqltotal = "select * from boardlist";
+$sqltotal = $sqltotal.$wheresql;
 $resulttotal = mysqli_query($connect_db , $sqltotal);
 $total = mysqli_num_rows($resulttotal);//전체글수.
-
 
 $total_page = ceil ($total / $page_set); // 총페이지수(올림함수)
 
 $total_block = ceil ($total_page / $block_set); // 총블럭수(올림함수)
+
 
 $block = ceil ($page / $block_set); // 현재블럭(올림함수)
 
 								// 페이지번호 & 블럭 설정
 $first_page = (($block - 1) * $block_set) + 1; // 첫번째 페이지번호
 
+//30 23
 $last_page = min ($total_page, $block * $block_set); // 마지막 페이지번호
 
- $prev_page = $page - 1; // 이전페이지
+$prev_page = $page - 1; // 이전페이지
 $next_page = $page + 1; // 다음페이지
 
 $prev_block = $block - 1; // 이전블럭
@@ -102,15 +137,35 @@ $next_block = $block + 1; // 다음블럭
 $prev_block_page = $prev_block * $block_set; // 이전블럭 페이지번호
 
 // 이전블럭을 블럭의 첫페이지로 하려면...
-//$prev_block_page = $prev_block * $block_set - ($block_set - 1);
-$next_block_page = $next_block * $block_set - ($block_set - 1); // 다음블럭 페이지번호
+$prev_block_page = $prev_block * $block_set - ($block_set - 1);//10-9 -> 1page
+$next_block_page = $next_block * $block_set - ($block_set - 1); // 다음블럭 페이지번호 30-9->21page.
 
+
+/*
+select b.*,A.cnt from
+(
+select b.idx, count(r.idx) as cnt from boardlist b left outer join reply r on b.idx = r.boardidx
+group by b.idx
+) A join boardlist b where A.idx = b.idx
+*/
+
+$number = 0;
+$number = ($page-1) *$page_set+$number;
 
 while($row = mysqli_fetch_array($result)){
+	$number++;
+	$sql = "select count(*) from reply where boardidx = ".$row['idx'];
+	$res = mysqli_query($connect_db,$sql);
+	$rowcount = mysqli_fetch_array($res);
+
+	$printrow = "";
+	if($rowcount[0] > 0){
+		$printrow = "[".$rowcount[0]."]";
+	}
 ?>
 <tr>
-<td><?=$row['idx']?></td>
-<td><a href="detail.php?idx=<?=$row['idx']?>"><?=$row['subject']?></a></td>
+<td><?=$number?></td>
+<td><a href="detail.php?idx=<?=$row['idx']?>"><?=$row['subject'].$printrow?></a></td>
 <td><?=$row['username']?></td>
 <td><?=$row['regdate']?></td>
 </tr>
@@ -121,16 +176,25 @@ while($row = mysqli_fetch_array($result)){
 </table>
 <?php
 // 페이징 화면
-echo ($prev_page > 0) ? "<a href='?page=$prev_page'>[prev]</a> " : "[prev] ";
-echo ($prev_block > 0) ? "<a href='?page=$prev_block_page'>...</a> " : "... ";
+echo ($prev_page > 0) ? "<a href='?page=$prev_page&searchtype=$searchtype&searchtext=$searchtext'>[prev]</a> " : "[prev] ";
+echo ($prev_block > 0) ? "<a href='?page=$prev_block_page&searchtype=$searchtype&searchtext=$searchtext'>...</a> " : "... ";
 
 for ($i=$first_page; $i<=$last_page; $i++) {
-echo ($i != $page) ? "<a href='?page=$i'>$i</a> " : "<b>$i</b> ";
+echo ($i != $page) ? "<a href='?page=$i&searchtype=$searchtype&searchtext=$searchtext'>$i</a> " : "<b>$i</b> ";
 }
 
-echo ($next_block <= $total_block) ? "<a href='?page=$next_block_page'>...</a> " : "... ";
-echo ($next_page <= $total_page) ? "<a href='?page=$next_page'>[next]</a>" : "[next]";
+echo ($next_block <= $total_block) ? "<a href='?page=$next_block_page&searchtype=$searchtype&searchtext=$searchtext'>...</a> " : "... ";
+echo ($next_page <= $total_page) ? "<a href='?page=$next_page&searchtype=$searchtype&searchtext=$searchtext'>[next]</a>" : "[next]";
+
 ?>
+검색 <select id="searchtype">
+<option value="writer">작성자</option>
+<option value="contents">글내용</option>
+<option value="subject">제목</option>
+</select>
+<input type='text' name='searchntext' id="searchntext">
+<input type='button' name='searchbtn' id="searchbtn" value='검색'>
+<br>
 <div class='alignright'>
 <input type='button' id='btnwrite' value='글쓰기'>
 </div>
@@ -184,6 +248,45 @@ $(function(){
 		layer_popup($href);
 	}
 	
+
+	$("#loginbtn").click(function(e){
+		location.href='login.php';
+	});
+
+	$("#logoutbtn").click(function(e){
+		//ajax : 경량화통신(json), 비동기/동기 : async
+		//$("#logoutbtn").css("background":"black");
+		$.ajax({
+			url:"logout.php",
+			dataType:'json',
+			async:true,
+			success:function(result){
+				/*
+				var result = {
+					msg : "성공적으로 로그 아웃되었습니다."
+				}
+				*/
+				alert(result.msg);
+				location.reload();//화면 새로고침.
+			},
+			error:function(request,status,error){
+				//alert(err.toString());
+				//통신하고 나서 
+				alert("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
+				console.log("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
+			}
+		});
+	});
+
+	$("#searchbtn").click(function(e){
+		//validation
+		if(!$("#searchntext").val()){
+			alert('검색어를 입력해주세요');
+			$("#searchntext").focus();
+			return false;
+		}
+		location.href="list.php?searchtype="+$("#searchtype").val()+ "&searchtext="+$("#searchntext").val();
+	});
 });
 
 
