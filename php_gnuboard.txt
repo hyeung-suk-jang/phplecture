@@ -1,0 +1,52 @@
+php 수업 5주차)
+답변형 게시판 완성.
+메일발송 완성.
+
+SELECT * FROM `boardlist` WHERE boardgroup = 17 order by boardgroup desc, level ASC
+
+
+댓글 수정/삭제
+
+글삭제 : 파일첨부되었으면 같이 삭제, 댓글 달렸으면 같이 삭제
+
+관리자로그인(회원등급) : 일괄삭제
+
+그누보드: 
+루트에 압축풀기
+data 폴더에 
+그누보드 메인화면
+- 통합검색
+- 메뉴만들기(하위메뉴:내용관리, )
+- 게시판만들기(3종세트 : 자유게시판, 질문답변, 갤러리)
+- 쪽지
+- 포인트
+- 회원관리
+
+어드민)
+게시판관리 : 게시판그룹추가 먼저
+https://www.youtube.com/watch?v=t2pXpQgVJyg&list=PLOQkV5KuGOvazJAS5XJjk0Ezf7XKM32ki&index=4
+테마수정
+고객게시판 : 절대경로.
+/bbs/board.php?bo_table=go_bbs1
+iframe으로 넣거나,
+특정영역에 존재하게.
+1) 상단파일경로설정, 하단파일경로설정
+2) 게시판 소스 인클루드 방식
+
+관리자)
+게시판 디자인/양식
+상단파일경로 설정
+하단파일경로 설정
+게시판 인클루드 방식
+
+제로보드)
+
+워드프레스)
+
+영카트)
+
+select * from boardlist where boardgroup= 17 
+ order by boardgroup desc, level asc 
+
+select * from boardlist where idx =23
+select * from boardlist where boardgroup = $boardgroup and level> $parentlevel and depth = $parentdepth

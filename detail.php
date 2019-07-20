@@ -5,6 +5,7 @@ $idx = $_REQUEST['idx'];
 $sql = "select * from boardlist where idx = $idx ";
 $result = mysqli_query($connect_db,$sql);
 $row = mysqli_fetch_array($result);
+$filename = $row['filename'];
 
 ?>
 <!DOCTYPE>
@@ -47,6 +48,10 @@ $row = mysqli_fetch_array($result);
 <td><?=$row['contents'];?></td>
 </tr>
 <tr>
+	<td>첨부파일</td>
+	<td><a href="#" id="download"><?=$row['filename']?></td>
+</tr>
+<tr>
 	<td colspan="2">
 	<input type="button" value="리스트로 돌아가기" class='btn1' id='btnlist'>
 	<?
@@ -55,6 +60,7 @@ $row = mysqli_fetch_array($result);
 	?>
 	<input type="button" value="수정" class='btn1' id='btnedit'><input type="button" value="삭제" id='btndel'>
 	<?}?>
+	<input type='button' value='답변달기' id="btnanswer">
 	</td>
 </tr>
 <tr>
@@ -64,8 +70,12 @@ $row = mysqli_fetch_array($result);
 			$sql = "select r.*,u.username from reply r join user u on r.userid = u.userid where r.boardidx = $idx ";
 			$result = mysqli_query($connect_db,$sql);
 			while($replyrow = mysqli_fetch_array($result)){
-
-				echo $replyrow['username']."(".$replyrow['userid'].") ".$replyrow['replytext']." ".$replyrow['regdate']."<br>";
+				echo $replyrow['username']."(".$replyrow['userid'].") : ".$replyrow['replytext']." ".$replyrow['regdate'];
+				//내가 쓴 댓글.
+				if($_SESSION['userid'] == $replyrow['userid']){
+					echo "<input type='button' value='수정' class='btnreplyedit' data-idx='".$replyrow['idx']."'>";
+					echo "<input type='button' value='삭제' class='btnreplydelete' data-idx='".$replyrow['idx']."'><br>";
+				}
 			}
 		?>
 
@@ -80,6 +90,9 @@ $row = mysqli_fetch_array($result);
 </tr>
 </table>
 </form>
+<form name="f3" id='f3' action='download.php'>
+<input type='hidden' name='filename' value='<?=$filename?>'>
+</form>
 <script
   src="https://code.jquery.com/jquery-3.4.1.js"
   integrity="sha256-WpOohJOqMqqyKL9FccASB9O0KwACQJpFTUBLTYOVvVU="
@@ -87,6 +100,9 @@ $row = mysqli_fetch_array($result);
 <script>
 $(function(){
 	var islogin = false;
+	var idx = <?=$idx?>;
+
+	var replyidx;
 	$("#replybtn").click(function(e){
 		//logincheck
 		<?
@@ -124,6 +140,8 @@ $(function(){
 				//dom추가.
 				if(result.res == 'S'){
 					$("#replylist").append(result.username + "(" +result.userid+")"+ result.text+" "+result.regdate);
+					$("#replylist").append("<input type='button' value='수정' class='btnreplyedit' data-idx='"+result.idx+"'>");
+					$("#replylist").append("<input type='button' value='삭제' class='btnreplydelete' data-idx='"+result.idx+"'>");
 				}
 			},
 			error:function(request,status,error){
@@ -133,13 +151,17 @@ $(function(){
 		});
 	});
 
+	//답변글 달기.
+	$("#btnanswer").click(function(){
+		location.href = 'write.php?type=answer&idx='+idx;
+	})
 
 	$("#btnlist").click(function(){
 		location.href='list.php';
 	});
 
 	$("#btnedit").click(function(){
-		location.href= 'edit.php?idx=<?=$idx?>';
+		location.href= 'edit.php?idx=$idx';
 	});
 
 	$("#btndel").click(function(){
@@ -174,6 +196,94 @@ $(function(){
 			});
 		}
 
+	});
+	$("#download").click(function(e){
+		e.preventDefault();
+		form = $('#f3');
+		form.submit();
+	});
+
+	//댓글 수정 버튼을 눌렀을때.
+	$(".btnreplyedit").click(function(e){
+		replyidx = $(this).attr("data-idx");
+
+		var text = $(this).parent().text();
+		var arr = text.split(":");//["장형석(test1), " 본문 2019-07-20 14","30","02];
+		console.log(arr[1]);
+		var reply = arr[1].substring(0,  arr[1].length - 13);
+		console.log(reply);
+		$(this).parent().html("<input type='text' name='editbox' value='"+reply+"'><input type='button' value='완료' class='btneditdone'>");
+		//$(this).parent().find('input[name="editbox"]').focus();
+	});
+
+	//댓글 삭제 버튼을 눌렀을때
+	$(".btnreplydelete").click(function(e){
+		replyidx = $(this).attr("data-idx");
+		var $td = $(this).parent();
+		var senddata = {
+			idx : replyidx
+		}
+		//ajax
+		$.ajax({
+			url:'replydel.php',
+			data:senddata,
+			dataType:'json',
+			success:function(result){
+				alert(result.msg);
+				//dom추가.
+				if(result.res == 'S'){
+					$td.html('');
+				}
+			},
+			error:function(request,status,error){
+			console.log("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
+			alert("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
+		  }
+		});
+		
+	});
+
+	//동적으로 추가된 요소에 이벤트를 걸때.
+	$(document).on("click",".btneditdone",function(e){
+		//validation
+		if(!$("input[name='editbox']").val()){
+			alert("댓글을 입력해주세요");
+			$("input[name='editbox']").focus();
+			return false;
+		}
+		var $td = $(this).parent();
+
+		//ajax 수정요청.
+		var senddata = {
+			idx : replyidx,
+			replytext :$("input[name='editbox']").val() 
+		};
+		//alert(senddata.idx+","+senddata.replytext);
+		//return;
+		//
+		$.ajax({
+			url:'replyedit.php',
+			data:senddata,
+			dataType:'json',
+			success:function(result){
+				alert(result.msg);
+				console.dir(result);
+				//this : 통신하고 난 결과.
+				console.log($td);
+				//dom추가.
+				if(result.res == 'S'){
+					$td.html('');
+				
+					$td.append(result.username + "(" +result.userid+")"+ result.text+" "+result.regdate);
+					$td.append("<input type='button' value='수정' class='btnreplyedit' data-idx='"+result.idx+"'>");
+					$td.append("<input type='button' value='삭제' class='btnreplydelete' data-idx='"+result.idx+"'>");
+				}
+			},
+			error:function(request,status,error){
+			console.log("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
+			alert("code:"+request.status+"\n"+"message:"+request.responseText+"\n"+"error:"+error);
+		  }
+		});
 	});
 });	
 	

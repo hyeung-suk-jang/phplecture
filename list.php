@@ -5,6 +5,14 @@ include_once("dbconn.php");
 //insert:저장 , select:조회할때, update : 수정, delete:삭제 4대 쿼리. 컬럼5개 : idx, subject, contents, username, regdate
 //* : 모든컬럼.
 
+
+//글 삭제 시 댓글도 삭제되기. 글삭제시 답변이 딸려 있는지 판단하여, 플래그 변경. 리스트에는 원본글 삭제 표시 됨.
+//자신의 댓글 삭제하기
+//글 본문에 그림파일 추가하기(네이버 에디터 사용하기)
+//댓글 수정하기.
+//첨부파일 있는글 삭제시 첨부파일도 삭제시키기
+
+
 //echo $_SESSION['userid'];
 ?>
 <!DOCTYPE>
@@ -68,12 +76,14 @@ if(isset($_SESSION['userid'])){
 <col width="500px">
 <col width="100px">
 <col width="100px">
+<col width="70px">
 </colgroup>
 <tr>
 <td>번호</td>
 <td>제목</td>
 <td>작성자</td>
 <td>작성일</td>
+<td>첨부파일</td>
 </tr>
 <?php
 
@@ -86,7 +96,7 @@ $searchtext = @$_REQUEST['searchtext'];
 $page = !empty($_REQUEST['page']) ? $_REQUEST['page']:1;//현재 페이지번호.
 
 // 페이지 설정
-$page_set = 10; // 한페이지에 보여줄 글 수 
+$page_set = 20; // 한페이지에 보여줄 글 수 
 $block_set = 10; // 한화면에 보여줄 페이지 갯수 블럭수
 
 $limit_idx = ($page - 1) * $page_set; // limit시작위치
@@ -103,8 +113,8 @@ if(isset($searchtype) && isset($searchtext)){
 		$wheresql =   " where subject like '%$searchtext%' ";
 	}
 }
-
-$sql = $sql.$wheresql ." LIMIT $limit_idx, $page_set"; //select * from boardlist limit 10, 10
+//order by asc(오름차순정렬), order by desc(내림차순정렬)
+$sql = $sql.$wheresql ." order by boardgroup desc, level asc  LIMIT $limit_idx, $page_set"; //select * from boardlist limit 10, 10
 echo $sql;
 
 $result = mysqli_query($connect_db, $sql);
@@ -133,12 +143,10 @@ $next_page = $page + 1; // 다음페이지
 $prev_block = $block - 1; // 이전블럭
 $next_block = $block + 1; // 다음블럭
 
-// 이전블럭을 블럭의 마지막으로 하려면...
-$prev_block_page = $prev_block * $block_set; // 이전블럭 페이지번호
 
 // 이전블럭을 블럭의 첫페이지로 하려면...
-$prev_block_page = $prev_block * $block_set - ($block_set - 1);//10-9 -> 1page
-$next_block_page = $next_block * $block_set - ($block_set - 1); // 다음블럭 페이지번호 30-9->21page.
+$prev_block_page = $prev_block * $block_set - ($block_set - 1);//10-9 -> 1page. 이전블럭에서의 첫페이지 번호.
+$next_block_page = $next_block * $block_set - ($block_set - 1); // 다음블럭 페이지번호 30-9->21page. 다음블럭에서의 첫 페이지번호.
 
 
 /*
@@ -165,9 +173,22 @@ while($row = mysqli_fetch_array($result)){
 ?>
 <tr>
 <td><?=$number?></td>
-<td><a href="detail.php?idx=<?=$row['idx']?>"><?=$row['subject'].$printrow?></a></td>
+<td><a href="detail.php?idx=<?=$row['idx']?>"><?
+if($row['level']>0){//답변글 이라면.
+	$padding = $row['depth']*10;
+	echo "<span style='padding-left:$padding'>";
+	echo "<img src = './img/re.jpg' width='20px' height='20px'></span>";
+}
+
+echo $row['subject'].$printrow;
+?></a></td>
 <td><?=$row['username']?></td>
 <td><?=$row['regdate']?></td>
+<td><?
+if($row['filename']){
+	echo "<img src='./img/clip.png' width='30px' height='30px'>";
+}	
+?></td>
 </tr>
 <?
 }

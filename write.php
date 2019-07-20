@@ -1,6 +1,9 @@
 <?php
 session_start();
 
+$idx = @$_REQUEST['idx'];
+$type = @$_REQUEST['type'];
+
 ?>
 <!DOCTYPE>
 <html lang='ko'>
@@ -16,8 +19,19 @@ session_start();
 </style>
 </head>
 <body>
-<form name="f1" action="write_ok.php" method="POST">
+<form name="f1" action="write_ok.php" method="POST" enctype="multipart/form-data">
+<input type='hidden' name='type' value='<?=$type?>'>
+<input type='hidden' name='idx' value='<?=$idx?>'>
+
 <table class="tbl">
+<tr>
+<td>SMS</td>
+<td><input type='checkbox' value="smsok" name="sms">관리자에게 sms전송하기.</td>
+</tr>
+<tr>
+<td>mail</td>
+<td><input type='checkbox' value='mail' name='mail'>관리자에게 메일보내기</td>
+</tr>
 <tr>
 <td>작성자</td>
 <td><input type='text' name='username' value="<?=$_SESSION['username']?>"></td>
@@ -29,6 +43,10 @@ session_start();
 <tr>
 <td>글본문</td>
 <td><textarea cols="100" rows="20" name='contents' id="contents"></textarea></td>
+</tr>
+<tr>
+<td>첨부파일</td>
+<td><input type='file' name='fileupload'></td>
 </tr>
 <tr>
 <td colspan="2" class="alignright">
@@ -60,7 +78,7 @@ $(function(){
 			$("#contents").focus();
 			return false;
 		}
-		
+		//sendmail('azanghs@gmail.com');
 		f1.submit();
 		//데이터베이스 저장. form, ajax
 		
@@ -69,6 +87,26 @@ $(function(){
 		location.href='list.php';
 	});
 });
+
+function sendmail(userid){
+	var senddata = {usermail : userid}
+	$.ajax({
+		url:"./mail/sendmail.php",
+		method:'post',
+		data:senddata,
+		async:true,
+		dataType:'html',
+		success:function(data){
+			alert('메일이 발송되었습니다.');
+		},
+		error:function(data){
+			console.log(data);
+			alert(msg.ajaxerror);
+			return false;
+		}
+	})
+
+}
 </script>
 </body>
 </html>
